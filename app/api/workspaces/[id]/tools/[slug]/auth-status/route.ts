@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { getAuthOptions } from '@/lib/auth'
-import { getConnectionStatus, isValidToolkit } from '@/lib/composio'
+import { ComposioClient } from '@/lib/composioClient'
+import { isValidToolkit, generateComposioUserId } from '@/lib/composio-utils'
 import { getWorkspaceWithPermissions } from '@/lib/db/queries'
 
 export async function GET(
@@ -43,12 +44,9 @@ export async function GET(
     }
 
     // Get connection status from Composio
-    const connectionStatus = await getConnectionStatus(
-      session.user.id,
-      params.id,
-      workspace.type === 'personal',
-      toolSlug
-    )
+    const client = new ComposioClient()
+    const composioUserId = generateComposioUserId(session.user.id, params.id, workspace.type === 'personal')
+    const connectionStatus = await client.getConnectionStatus(composioUserId, toolSlug)
 
     return NextResponse.json({
       success: true,

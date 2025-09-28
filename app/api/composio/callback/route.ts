@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { getAuthOptions } from '@/lib/auth'
-import { generateComposioUserId } from '@/lib/composio'
+import { generateComposioUserId } from '@/lib/composio-utils'
 import { getWorkspaceWithPermissions, enableWorkspaceTool } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
 import { ComposioClient } from '@/lib/composioClient'

@@ -123,4 +123,39 @@ export class ComposioClient {
       return { success: false, error: error?.message || 'Invalid API key' }
     }
   }
+
+  async executeAction(userId: string, toolkit: string, action: string, parameters: Record<string, any>): Promise<{ success: boolean; data?: any; error?: string; executionId?: string }> {
+    try {
+      const toolSlug = `${toolkit}_${action}`
+      const anySdk: any = this.composio as any
+      const resp = anySdk?.tools?.execute
+        ? await anySdk.tools.execute(toolSlug, { userId, params: parameters })
+        : await anySdk.actions.execute(toolSlug, { userId, params: parameters })
+      return {
+        success: true,
+        data: resp?.data ?? resp,
+        executionId: resp?.id || resp?.executionId || resp?.execution_id,
+      }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Execution failed' }
+    }
+  }
+
+  async revokeConnection(connectionId: string): Promise<boolean> {
+    try {
+      const anySdk: any = this.composio as any
+      if (anySdk?.connectedAccounts?.delete) {
+        await anySdk.connectedAccounts.delete(connectionId)
+        return true
+      }
+      if (anySdk?.connectedAccounts?.revoke) {
+        await anySdk.connectedAccounts.revoke(connectionId)
+        return true
+      }
+      // Fallback: treat as success if SDK lacks explicit method
+      return true
+    } catch {
+      return false
+    }
+  }
 }

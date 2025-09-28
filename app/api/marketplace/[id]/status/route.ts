@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { getAuthOptions } from '@/lib/auth'
-import { getConnectionStatus } from '@/lib/composio'
+import { ComposioClient } from '@/lib/composioClient'
+import { generateComposioUserId } from '@/lib/composio-utils'
 import { getWorkspaceWithPermissions } from '@/lib/db/queries'
 import { marketplaceApps } from '@/lib/data/marketplace-apps'
 
@@ -68,12 +69,9 @@ export async function GET(
     }
 
     // Get connection status from Composio
-    const connectionStatus = await getConnectionStatus(
-      session.user.id,
-      workspaceId,
-      workspace.type === 'personal',
-      app.composioToolkit
-    )
+    const client = new ComposioClient()
+    const composioUserId = generateComposioUserId(session.user.id, workspaceId, workspace.type === 'personal')
+    const connectionStatus = await client.getConnectionStatus(composioUserId, app.composioToolkit)
 
     return NextResponse.json({
       appId,
