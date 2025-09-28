@@ -40,20 +40,23 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 // Convert string IDs to numbers for database operations
 function parseId(id: string | number): number {
   if (typeof id === 'number') {
-    if (isNaN(id) || !isFinite(id)) {
+    if (!Number.isFinite(id) || !Number.isInteger(id) || id <= 0) {
+      console.error('parseId rejection (number)', { id })
       throw new Error(`Invalid numeric ID: ${id}`)
     }
     return id
   }
-  
+
   if (typeof id === 'string') {
-    const parsed = parseInt(id, 10)
-    if (isNaN(parsed) || !isFinite(parsed)) {
+    const parsed = Number(id)
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+      console.error('parseId rejection (string)', { id })
       throw new Error(`Invalid string ID: ${id}`)
     }
     return parsed
   }
-  
+
+  console.error('parseId rejection (type)', { idType: typeof id })
   throw new Error(`Invalid ID type: ${typeof id}`)
 }
 
@@ -68,12 +71,22 @@ export async function updateUser(id: number, userData: Partial<NewUser>): Promis
 // Workspace queries
 export async function createWorkspace(workspaceData: NewWorkspace | any): Promise<Workspace> {
   // Handle both database format and API format
+  const ownerRaw = workspaceData.owner_id || workspaceData.ownerId
+  if (ownerRaw === undefined || ownerRaw === null) {
+    console.error('createWorkspace missing owner_id', { ownerRaw })
+    throw new Error('owner_id must be a positive integer')
+  }
+  const ownerIdNum = parseId(ownerRaw)
   const dbData = {
     name: workspaceData.name,
     type: workspaceData.type,
-    owner_id: workspaceData.owner_id || workspaceData.ownerId,
+    owner_id: ownerIdNum,
     description: workspaceData.description,
     settings: workspaceData.settings || {}
+  }
+  if (!dbData.owner_id) {
+    console.error('createWorkspace invalid owner_id', { ownerRaw })
+    throw new Error('owner_id must be a positive integer')
   }
 
   const [workspace] = await db.insert(workspaces).values(dbData).returning()

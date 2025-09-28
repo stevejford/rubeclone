@@ -1,29 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { z } from 'zod'
 import { getAuthOptions } from '@/lib/auth'
-import { completeConnection } from '@/lib/composio'
+import { generateComposioUserId } from '@/lib/composio'
 import { getWorkspaceWithPermissions, enableWorkspaceTool } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
+import { ComposioClient } from '@/lib/composioClient'
 
 /**
  * OAuth callback endpoint for Composio connections
  * GET /api/composio/callback?code=...&state=...
  */
-
-const callbackParamsSchema = z.object({
-  // Traditional OAuth parameters
-  code: z.string().min(1).optional(),
-  state: z.string().min(1).optional(),
-  error: z.string().optional(),
-  error_description: z.string().optional(),
-  // Composio hosted authentication parameters
-  success: z.string().optional(),
-  userId: z.string().optional(),
-  toolkit: z.string().optional(),
-  connectionId: z.string().optional(),
-  message: z.string().optional(),
-}).passthrough() // Allow additional parameters from OAuth provider
 
 export async function GET(request: NextRequest) {
   console.log('🚨 CALLBACK ROUTE HIT! URL:', request.nextUrl.href)
@@ -86,18 +72,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 REQUEST METHOD:', request.method)
     console.log('🔍 REQUEST HEADERS:', Object.fromEntries(request.headers.entries()))
 
-    const parseResult = callbackParamsSchema.safeParse(params)
-
-    if (!parseResult.success) {
-      console.error('❌ Callback validation failed:', {
-        errors: parseResult.error.errors,
-        receivedParams: params,
-        expectedSchema: 'code (string), state (string), error (optional string), error_description (optional string)'
-      })
-      return redirectWithError(request, `Invalid callback parameters: ${parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`)
-    }
-
-    const { code, state, error, error_description, success, userId, toolkit, connectionId, message } = parseResult.data
+    const { code, state, error, error_description, success, userId, toolkit, connectionId, message } = params
 
     // Detect if this is Composio hosted authentication or traditional OAuth
     const isComposioHosted = !!(success || userId || toolkit || connectionId)
@@ -164,12 +139,13 @@ export async function GET(request: NextRequest) {
     
     if (!isComposioHosted && state) {
       try {
-        const decoded = JSON.parse(Buffer.from(state, 'base64url').toString())
+        const client = new ComposioClient()
+        const decoded = client.decodeState(state)
         stateData = {
           userId: decoded.userId,
           workspaceId: decoded.workspaceId,
           toolkit: decoded.toolkit,
-          source: decoded.source || 'workspace', // Default to workspace for backward compatibility
+          source: decoded.source || 'workspace',
         }
       } catch (error) {
         console.error('Failed to decode state:', error)
@@ -209,23 +185,19 @@ export async function GET(request: NextRequest) {
         return redirectWithError(request, 'Insufficient permissions')
       }
 
-      // Complete the OAuth connection with Composio
-      const connectionResult = await completeConnection(
-        code!,
-        state!,
-        session.user.id,
-        stateData.workspaceId,
-        workspace.type === 'personal'
-      )
+      // Look up connection status via SDK and enable tool
+      const client = new ComposioClient()
+      const composioUserId = generateComposioUserId(session.user.id, stateData.workspaceId, workspace.type === 'personal')
+      const status = await client.getConnectionStatus(composioUserId, stateData.toolkit)
 
       // Update workspace_tools table with connection details
       await enableWorkspaceTool(
         parseInt(stateData.workspaceId),
-        connectionResult.toolkit,
+        stateData.toolkit,
         parseInt(session.user.id),
         {
-          connectionId: connectionResult.connectionId,
-          connectionStatus: 'connected',
+          connectionId: status.connectionId,
+          connectionStatus: status.status,
           lastSync: new Date().toISOString(),
           connectedAt: new Date().toISOString(),
         }
@@ -239,7 +211,7 @@ export async function GET(request: NextRequest) {
               <head><title>Connection Successful</title></head>
               <body>
                 <div style="text-align: center; padding: 50px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                  <h2>🎉 Successfully connected ${connectionResult.toolkit}</h2>
+                  <h2>🎉 Successfully connected ${stateData.toolkit}</h2>
                   <p>This window will close automatically...</p>
                 </div>
                 <script>
@@ -247,8 +219,8 @@ export async function GET(request: NextRequest) {
                   if (window.opener) {
                     window.opener.postMessage({ 
                       type: 'composio-auth-success',
-                      toolkit: '${connectionResult.toolkit}',
-                      message: 'Successfully connected ${connectionResult.toolkit}'
+                      toolkit: '${stateData.toolkit}',
+                      message: 'Successfully connected ${stateData.toolkit}'
                     }, '*');
                     window.close();
                   }
@@ -264,8 +236,8 @@ export async function GET(request: NextRequest) {
           // Default: redirect to workspace tools page
           const redirectUrl = new URL(`/workspaces/${stateData.workspaceId}/tools`, request.nextUrl.origin)
           redirectUrl.searchParams.set('success', 'true')
-          redirectUrl.searchParams.set('toolkit', connectionResult.toolkit)
-          redirectUrl.searchParams.set('message', `Successfully connected ${connectionResult.toolkit}`)
+          redirectUrl.searchParams.set('toolkit', stateData.toolkit)
+          redirectUrl.searchParams.set('message', `Successfully connected ${stateData.toolkit}`)
           
           return NextResponse.redirect(redirectUrl)
         }
@@ -289,6 +261,8 @@ export async function GET(request: NextRequest) {
 
     return redirectWithError(request, errorMessage)
   }
+  // Fallback to ensure all code paths return a response
+  return redirectWithError(request, 'Invalid callback flow')
 }
 
 /**
