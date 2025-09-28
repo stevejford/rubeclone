@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 import { getAuthOptions } from '@/lib/auth'
-import { initiateMCPConnection } from '@/lib/composio-mcp'
-import { isValidToolkit } from '@/lib/composio'
+import { isValidToolkit, generateComposioUserId } from '@/lib/composio'
 import { getWorkspaceWithPermissions } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
+import { zId } from '@/lib/utils/ids'
+import { ComposioClient } from '@/lib/composioClient'
 
 /**
  * API endpoint for initiating Composio OAuth connections
@@ -13,9 +14,9 @@ import { aiConfig } from '@/lib/env'
  */
 
 const connectRequestSchema = z.object({
-  workspaceId: z.string().transform(Number),
+  workspaceId: zId(),
   toolkit: z.string().min(1).max(50),
-  source: z.string().optional().default('workspace'), // 'marketplace' or 'workspace'
+  source: z.string().optional().default('workspace'),
 })
 
 export async function POST(request: NextRequest) {
@@ -92,13 +93,11 @@ export async function POST(request: NextRequest) {
       isPersonal: workspace.type === 'personal'
     })
 
-    // Initiate OAuth connection with Composio MCP
-    const connectionResult = await initiateMCPConnection(
-      session.user.id,
-      workspaceId.toString(),
-      toolkit,
-      source
-    )
+    const client = new ComposioClient()
+    const composioUserId = generateComposioUserId(session.user.id, String(workspaceId), workspace.type === 'personal')
+    const state = client.encodeState(session.user.id, String(workspaceId), toolkit, source as any)
+    const callbackUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/composio/callback`
+    const connectionResult = await client.linkOAuth(composioUserId, toolkit, callbackUrl, state)
 
     console.log('✅ Connection initiated:', connectionResult)
 

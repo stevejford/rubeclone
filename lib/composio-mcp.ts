@@ -365,7 +365,7 @@ export async function initiateMCPConnection(
   userId: string,
   workspaceId: string,
   toolkit: string,
-  source: string = 'workspace'
+  _source: string = 'workspace'
 ): Promise<{ redirectUrl: string; state: string }> {
   const client = getComposioMCPClient();
 
@@ -382,12 +382,6 @@ export async function initiateMCPConnection(
       return {
         redirectUrl: result.redirectUrl,
         state: result.state || '', // Use Composio's state if provided
-        metadata: {
-          userId,
-          workspaceId,
-          toolkit,
-          source
-        }
       };
     } else {
       console.error('❌ No redirect URL returned from auth initiation:', result);
@@ -423,15 +417,4 @@ export async function checkMCPConnectionStatus(
 /**
  * Generate secure state parameter for OAuth flow
  */
-function generateSecureState(userId: string, workspaceId: string, toolkit: string, source: string = 'workspace'): string {
-  const data = {
-    userId,
-    workspaceId,
-    toolkit,
-    source, // 'marketplace' or 'workspace'
-    timestamp: Date.now(),
-    nonce: Math.random().toString(36).substring(2),
-  };
-
-  return Buffer.from(JSON.stringify(data)).toString('base64url');
-}
+// Removed unused generateSecureState helper
