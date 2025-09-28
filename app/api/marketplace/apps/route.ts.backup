@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { composioMarketplaceService } from '@/lib/services/composio-marketplace';
+import { MarketplaceFilters } from '@/types/marketplace';
+
+const querySchema = z.object({
+  q: z.string().optional(),
+  category: z.string().optional(),
+  sort: z.enum(['name', 'tool_count', 'category', 'popularity', 'rating']).optional(),
+  page: z.string().transform(val => parseInt(val) || 1).optional(),
+  limit: z.string().transform(val => parseInt(val) || 24).optional(),
+  pricing: z.enum(['free', 'paid', 'freemium']).optional(),
+  auth: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
+  tags: z.string().optional(),
+});
+
+export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const queryParams = Object.fromEntries(searchParams.entries());
+
+    // Validate query parameters
+    const validatedParams = querySchema.parse(queryParams);
+
+    // Build filters object
+    const filters: MarketplaceFilters = {
+      query: validatedParams.q,
+      category: validatedParams.category,
+      sort: validatedParams.sort,
+      page: validatedParams.page,
+      limit: validatedParams.limit,
+      pricing: validatedParams.pricing,
+      requires_auth: validatedParams.auth,
+      tags: validatedParams.tags ? validatedParams.tags.split(',') : undefined,
+    };
+
+    // Fetch apps from marketplace service
+    const result = await composioMarketplaceService.getApps(filters);
+
+    // Calculate response time
+    const responseTime = Date.now() - startTime;
+
+    // Optimize response payload - remove unnecessary fields for list view
+    const optimizedApps = result.apps.map(app => ({
+      slug: app.slug,
+      name: app.name,
+      description: app.description?.substring(0, 200) + (app.description?.length > 200 ? '...' : ''), // Truncate descriptions
+      icon_url: app.icon_url,
+      website_url: app.website_url,
+      category: app.category,
+      pricing_model: app.pricing_model,
+      requires_auth: app.requires_auth,
+      tool_count: app.tool_count,
+      rating: app.rating,
+      // Remove heavy fields like detailed_description, tools array, etc.
+    }));
+
+    // Set aggressive cache headers for better performance
+    const cacheHeaders = {
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1800, max-age=300',
+      'CDN-Cache-Control': 'public, s-maxage=600',
+      'Vercel-CDN-Cache-Control': 'public, s-maxage=600',
+      'X-Response-Time': `${responseTime}ms`,
+      'X-Cache-Status': 'MISS', // Will be overridden by CDN if cached
+      'Content-Type': 'application/json; charset=utf-8',
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        apps: optimizedApps,
+        pagination: {
+          page: result.page,
+          limit: filters.limit || 24,
+          total: result.total,
+          totalPages: result.totalPages,
+          hasNext: result.page < result.totalPages,
+          hasPrev: result.page > 1,
+        },
+        filters: {
+          query: filters.query,
+          category: filters.category,
+          sort: filters.sort,
+          pricing: filters.pricing,
+          requires_auth: filters.requires_auth,
+          tags: filters.tags,
+        },
+        meta: {
+          responseTime: `${responseTime}ms`,
+          cached: false, // Will be updated if using cache
+          timestamp: new Date().toISOString(),
+          payloadSize: JSON.stringify(optimizedApps).length,
+        },
+      },
+    }, {
+      status: 200,
+      headers: cacheHeaders,
+    });
+
+  } catch (error) {
+    console.error('Marketplace API error:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message,
+        })),
+      }, { status: 400 });
+    }
+
+    if (error instanceof Error) {
+      // Handle specific marketplace service errors
+      if (error.message.includes('Partner API error')) {
+        return NextResponse.json({
+          success: false,
+          error: 'External service unavailable',
+          message: 'The marketplace service is temporarily unavailable. Please try again later.',
+        }, { status: 503 });
+      }
+
+      if (error.message.includes('rate limit')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Rate limit exceeded',
+          message: 'Too many requests. Please try again later.',
+        }, { status: 429 });
+      }
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: 'An unexpected error occurred while fetching marketplace data.',
+    }, { status: 500 });
+  }
+}
+
+// Handle OPTIONS for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}

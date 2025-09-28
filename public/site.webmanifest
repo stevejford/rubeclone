@@ -1,0 +1,22 @@
+{
+  "name": "Composio - AI Tool Marketplace",
+  "short_name": "Composio",
+  "description": "Discover, integrate, and manage AI tools and services with Composio - the powerful marketplace platform for AI automation.",
+  "icons": [
+    {
+      "src": "/composio-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#6366f1",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
+}

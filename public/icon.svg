@@ -1,0 +1,22 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="composio-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="192" height="192" rx="24" fill="url(#composio-gradient)"/>
+
+  <!-- Composio "C" logo -->
+  <g transform="translate(48, 48)">
+    <!-- Outer circle -->
+    <circle cx="48" cy="48" r="40" fill="none" stroke="white" stroke-width="8"/>
+    <!-- Inner connecting elements -->
+    <path d="M48 8 L48 32 M48 64 L48 88 M8 48 L32 48 M64 48 L88 48" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <!-- Center dot -->
+    <circle cx="48" cy="48" r="6" fill="white"/>
+  </g>
+</svg>

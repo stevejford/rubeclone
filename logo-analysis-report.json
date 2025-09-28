@@ -1,0 +1,167 @@
+[
+  {
+    "name": "Gmail",
+    "slug": "gmail",
+    "logoUrl": "https://logos.composio.dev/api/gmail",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "fileSize": 901,
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Composio",
+    "slug": "composio",
+    "logoUrl": "https://logos.composio.dev/api/composio",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "GitHub",
+    "slug": "github",
+    "logoUrl": "https://logos.composio.dev/api/github",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Googlecalendar",
+    "slug": "googlecalendar",
+    "logoUrl": "https://logos.composio.dev/api/googlecalendar",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Notion",
+    "slug": "notion",
+    "logoUrl": "https://logos.composio.dev/api/notion",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Googlesheets",
+    "slug": "googlesheets",
+    "logoUrl": "https://logos.composio.dev/api/googlesheets",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "fileSize": 828,
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Slack",
+    "slug": "slack",
+    "logoUrl": "https://logos.composio.dev/api/slack",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Supabase",
+    "slug": "supabase",
+    "logoUrl": "https://logos.composio.dev/api/supabase",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Outlook",
+    "slug": "outlook",
+    "logoUrl": "https://logos.composio.dev/api/outlook",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Perplexityai",
+    "slug": "perplexityai",
+    "logoUrl": "https://cdn.jsdelivr.net/gh/ComposioHQ/open-logos@master//perplexity.jpeg",
+    "logoQuality": "high",
+    "logoSource": "open-logos-cdn",
+    "fileSize": 21105,
+    "dimensions": "image/jpeg"
+  },
+  {
+    "name": "Twitter",
+    "slug": "twitter",
+    "logoUrl": "https://logos.composio.dev/api/twitter",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "fileSize": 540,
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Googledrive",
+    "slug": "googledrive",
+    "logoUrl": "https://logos.composio.dev/api/googledrive",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Googledocs",
+    "slug": "googledocs",
+    "logoUrl": "https://logos.composio.dev/api/googledocs",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Hubspot",
+    "slug": "hubspot",
+    "logoUrl": "https://logos.composio.dev/api/hubspot",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Linear",
+    "slug": "linear",
+    "logoUrl": "https://logos.composio.dev/api/linear",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Airtable",
+    "slug": "airtable",
+    "logoUrl": "https://logos.composio.dev/api/airtable",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Codeinterpreter",
+    "slug": "codeinterpreter",
+    "logoUrl": "https://cdn.jsdelivr.net/gh/ComposioHQ/open-logos@master//code-interpreter.webp",
+    "logoQuality": "high",
+    "logoSource": "open-logos-cdn",
+    "fileSize": 46460,
+    "dimensions": "image/webp"
+  },
+  {
+    "name": "Serpapi",
+    "slug": "serpapi",
+    "logoUrl": "https://logos.composio.dev/api/serpapi",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Jira",
+    "slug": "jira",
+    "logoUrl": "https://logos.composio.dev/api/jira",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  },
+  {
+    "name": "Firecrawl",
+    "slug": "firecrawl",
+    "logoUrl": "https://logos.composio.dev/api/firecrawl",
+    "logoQuality": "high",
+    "logoSource": "composio-api",
+    "dimensions": "image/svg+xml"
+  }
+]
