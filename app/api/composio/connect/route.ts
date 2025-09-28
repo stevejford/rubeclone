@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const client = new ComposioClient()
     const composioUserId = generateComposioUserId(session.user.id, String(workspaceId), workspace.type === 'personal')
     const state = client.encodeState(session.user.id, String(workspaceId), toolkit, source as any)
-    const callbackUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/composio/callback`
+    const callbackUrl = new URL('/api/composio/callback', request.nextUrl.origin).toString()
     const connectionResult = await client.linkOAuth(composioUserId, toolkit, callbackUrl, state)
 
     console.log('✅ Connection initiated:', connectionResult)
