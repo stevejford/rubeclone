@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceTools, enableWorkspaceTool, disableWorkspaceTool, getWorkspaceWithPermissions } from '@/lib/db/queries';
 import { workspaceToolSchema } from '@/lib/validations/workspace';
-import { isValidToolkit, generateComposioUserId } from '@/lib/composio';
+import { isValidToolkit, generateComposioUserId } from '@/lib/composio-utils';
 import { z } from 'zod';
 import { requireWorkspaceMember, requireWorkspaceAdmin } from '@/lib/api/guards';
 import { ComposioClient } from '@/lib/composioClient';
