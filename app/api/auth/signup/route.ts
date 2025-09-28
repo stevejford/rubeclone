@@ -11,12 +11,14 @@ export async function POST(request: NextRequest) {
     
     // Validate the request body
     const validatedData = signUpSchema.parse(body)
+    // Normalize email to lowercase for consistent storage and auth
+    const email = validatedData.email.toLowerCase().trim()
     
     // Check if user already exists
     const existingUser = await db
       .select()
       .from(users)
-      .where(eq(users.email, validatedData.email))
+      .where(eq(users.email, email))
       .limit(1)
 
     if (existingUser.length > 0) {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
       .insert(users)
       .values({
         name: validatedData.name,
-        email: validatedData.email,
+        email,
         password: hashedPassword,
         role: "user",
       })
