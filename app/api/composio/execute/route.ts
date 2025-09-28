@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { getAuthOptions } from '@/lib/auth'
 import { executeTool } from '@/lib/composio'
-import { getWorkspaceWithPermissions, getWorkspaceTool, recordToolUsage } from '@/lib/db/queries'
+import { getWorkspaceTool, recordToolUsage, isWorkspaceMemberOrOwner } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
+import { requireSession } from '@/lib/api/guards'
 
 /**
  * Tool execution proxy endpoint for secure tool operations
@@ -29,13 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user authentication
-    const session = await getServerSession(getAuthOptions())
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    const { userId } = await requireSession(request)
 
     // Parse and validate request body
     const body = await request.json()
@@ -57,18 +50,7 @@ export async function POST(request: NextRequest) {
     const { workspaceId, toolSlug, action, parameters } = parseResult.data
 
     // Verify workspace access permissions
-    const workspace = await getWorkspaceWithPermissions(workspaceId, parseInt(session.user.id))
-    if (!workspace) {
-      return NextResponse.json(
-        { error: 'Workspace not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check if user has access to the workspace
-    const hasAccess = workspace.owner_id === parseInt(session.user.id) ||
-                     workspace.members?.some((m: any) => m.user_id === parseInt(session.user.id))
-    
+    const hasAccess = await isWorkspaceMemberOrOwner(workspaceId, userId)
     if (!hasAccess) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
@@ -104,9 +86,9 @@ export async function POST(request: NextRequest) {
 
     // Execute the tool action via Composio SDK
     const executionResult = await executeTool(
-      session.user.id,
+      String(userId),
       workspaceId.toString(),
-      workspace.type === 'personal',
+      false,
       toolSlug,
       action,
       parameters
@@ -115,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Record usage statistics for billing and analytics
     try {
       await recordToolUsage(
-        parseInt(session.user.id),
+        userId,
         workspaceId,
         toolSlug,
         new Date()

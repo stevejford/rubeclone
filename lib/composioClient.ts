@@ -102,4 +102,25 @@ export class ComposioClient {
       timestamp: decoded.timestamp,
     }
   }
+
+  async testApiKey(toolkit: string, apiKey: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const created = await this.composio.authConfigs.create(toolkit.toUpperCase(), {
+        name: `${toolkit} API Key Test`,
+        type: 'use_custom_auth',
+        authScheme: 'API_KEY',
+        credentials: {}
+      } as any)
+
+      const apiKeyObject: any = { api_key: apiKey }
+      await this.composio.connectedAccounts.initiate(`test_${Date.now()}`, (created as any).id, {
+        config: { authScheme: 'API_KEY' as any, val: apiKeyObject },
+      } as any)
+
+      try { await (this.composio as any).authConfigs.delete((created as any).id) } catch {}
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Invalid API key' }
+    }
+  }
 }
