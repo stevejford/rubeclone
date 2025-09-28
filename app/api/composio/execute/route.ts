@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { executeTool } from '@/lib/composio'
+import { ComposioClient } from '@/lib/composioClient'
 import { getWorkspaceTool, recordToolUsage, isWorkspaceMemberOrOwner } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
 import { requireSession } from '@/lib/api/guards'
@@ -84,15 +84,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Execute the tool action via Composio SDK
-    const executionResult = await executeTool(
-      String(userId),
-      workspaceId.toString(),
-      false,
-      toolSlug,
-      action,
-      parameters
-    )
+    // Execute the tool action via unified Composio client
+    const client = new ComposioClient()
+    const executionResult = await client.executeAction(String(userId), toolSlug, action, parameters)
 
     // Record usage statistics for billing and analytics
     try {

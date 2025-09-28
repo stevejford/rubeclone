@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { disconnectTool } from '@/lib/composio'
+import { ComposioClient } from '@/lib/composioClient'
 import { getWorkspaceTool, disableWorkspaceTool, isWorkspaceOwnerOrAdmin } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
 import { requireSession } from '@/lib/api/guards'
@@ -68,14 +68,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Disconnect the tool via Composio SDK
-    const disconnectSuccess = await disconnectTool(
-      String(userId),
-      workspaceId.toString(),
-      false,
-      toolkit,
-      workspaceTool.connection_id
-    )
+    // Disconnect the tool via unified Composio client
+    const client = new ComposioClient()
+    const disconnectSuccess = await client.revokeConnection(workspaceTool.connection_id)
 
     if (!disconnectSuccess) {
       // Even if Composio disconnect fails, we should clean up our database
