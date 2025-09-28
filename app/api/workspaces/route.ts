@@ -16,8 +16,33 @@ export async function GET() {
       );
     }
 
-    const workspaces = await getUserWorkspaces(session.user.id);
-    
+    let workspaces = await getUserWorkspaces(session.user.id);
+
+    // Auto-provision a personal workspace for first-time users
+    if (!workspaces || workspaces.length === 0) {
+      const ownerId = parseInt(session.user.id, 10);
+      const personalName = session.user.name ? `${session.user.name.split(' ')[0]}'s Workspace` : 'Personal Workspace';
+
+      const workspace = await createWorkspace({
+        name: personalName,
+        description: 'Your personal workspace',
+        type: 'personal',
+        owner_id: ownerId,
+      });
+
+      try {
+        await addWorkspaceMember({
+          workspace_id: workspace.id,
+          user_id: ownerId,
+          role: 'admin',
+        });
+      } catch (e) {
+        console.warn('Failed to add owner as member during auto-provision:', e);
+      }
+
+      workspaces = [workspace];
+    }
+
     return NextResponse.json({ workspaces });
   } catch (error) {
     console.error('Error fetching workspaces:', error);
