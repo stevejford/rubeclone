@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { getAuthOptions } from '@/lib/auth'
 import { disconnectTool } from '@/lib/composio'
-import { getWorkspaceWithPermissions, getWorkspaceTool, disableWorkspaceTool } from '@/lib/db/queries'
+import { getWorkspaceTool, disableWorkspaceTool, isWorkspaceOwnerOrAdmin } from '@/lib/db/queries'
 import { aiConfig } from '@/lib/env'
+import { requireSession } from '@/lib/api/guards'
 
 /**
  * Endpoint for disconnecting Composio OAuth connections
@@ -27,13 +26,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify user authentication
-    const session = await getServerSession(getAuthOptions())
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    const { userId } = await requireSession(request)
 
     // Parse and validate request body
     const body = await request.json()
@@ -53,26 +46,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { workspaceId, toolkit } = parseResult.data
-
-    try {
-      // Verify workspace permissions (owner/admin only)
-    const workspace = await getWorkspaceWithPermissions(workspaceId, parseInt(session.user.id))
-    if (!workspace) {
-      return NextResponse.json(
-        { error: 'Workspace not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check if user has permission to manage tools (owner or admin)
-    const userRole = workspace.owner_id === parseInt(session.user.id) ? 'owner' :
-                    workspace.members?.find((m: any) => m.user_id === parseInt(session.user.id))?.role
-    
-    if (userRole !== 'owner' && userRole !== 'admin') {
-      return NextResponse.json(
-        { error: 'Insufficient permissions. Only workspace owners and admins can disconnect tools.' },
-        { status: 403 }
-      )
+    // Verify permissions (owner/admin)
+    const allowed = await isWorkspaceOwnerOrAdmin(workspaceId, userId)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get the workspace tool to retrieve connection ID
@@ -93,9 +70,9 @@ export async function DELETE(request: NextRequest) {
 
     // Disconnect the tool via Composio SDK
     const disconnectSuccess = await disconnectTool(
-      session.user.id,
+      String(userId),
       workspaceId.toString(),
-      workspace.type === 'personal',
+      false,
       toolkit,
       workspaceTool.connection_id
     )
@@ -113,52 +90,15 @@ export async function DELETE(request: NextRequest) {
       lastSync: null,
     })
 
-      return NextResponse.json({
-        success: true,
-        message: `Successfully disconnected ${toolkit}`,
-        toolkit,
-        workspaceId,
-        disconnectedAt: new Date().toISOString(),
-      })
-
-    } catch (error) {
+    return NextResponse.json({
+      success: true,
+      message: `Successfully disconnected ${toolkit}`,
+      toolkit,
+      workspaceId,
+      disconnectedAt: new Date().toISOString(),
+    })
+  } catch (error) {
     console.error('Composio disconnect error:', error)
-    
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (error.message.includes('Composio client not available')) {
-        return NextResponse.json(
-          { error: 'Composio service is temporarily unavailable' },
-          { status: 503 }
-        )
-      }
-      
-      if (error.message.includes('Connection not found')) {
-        // Clean up database even if connection doesn't exist in Composio
-        try {
-          await disableWorkspaceTool(workspaceId, toolkit, {
-            connectionId: null,
-            connectionStatus: 'disconnected',
-            disconnectedAt: new Date().toISOString(),
-          })
-        } catch (cleanupError) {
-          console.error('Failed to cleanup after connection not found:', cleanupError)
-        }
-        
-        return NextResponse.json(
-          { error: 'Connection not found, but cleaned up local records' },
-          { status: 404 }
-        )
-      }
-    }
-
-      return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 }
-      )
-    }
-  } catch (outerError) {
-    console.error('Outer error in disconnect route:', outerError)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

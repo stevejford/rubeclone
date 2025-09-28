@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { getAuthOptions } from '@/lib/auth'
-import { getComposioMCPClient } from '@/lib/composio-mcp'
-import { getWorkspaceWithPermissions, enableWorkspaceTool } from '@/lib/db/queries'
+import { requireSession } from '@/lib/api/guards'
+import { enableWorkspaceTool, isWorkspaceOwnerOrAdmin } from '@/lib/db/queries'
+import { ComposioClient } from '@/lib/composioClient'
 import { aiConfig } from '@/lib/env'
 
 /**
@@ -27,15 +26,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user authentication
-    const session = await getServerSession(getAuthOptions())
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
     // Parse and validate request body
     const body = await request.json()
     const parseResult = connectApiKeySchema.safeParse(body)
@@ -53,42 +43,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { userId } = await requireSession(request)
+
     const { workspaceId, toolkit, apiKey } = parseResult.data
-
-    // Verify workspace permissions (owner/admin only)
-    const workspace = await getWorkspaceWithPermissions(workspaceId, parseInt(session.user.id))
-    if (!workspace) {
-      return NextResponse.json(
-        { error: 'Workspace not found' },
-        { status: 404 }
-      )
+    // Verify permissions (owner/admin)
+    const allowed = await isWorkspaceOwnerOrAdmin(workspaceId, userId)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
-    // Check if user has permission to manage tools (owner or admin)
-    const userRole = workspace.owner_id === parseInt(session.user.id) ? 'owner' :
-                    workspace.members?.find((m: any) => m.user_id === parseInt(session.user.id))?.role
-    
-    if (userRole !== 'owner' && userRole !== 'admin') {
-      return NextResponse.json(
-        { error: 'Insufficient permissions. Only workspace owners and admins can connect tools.' },
-        { status: 403 }
-      )
-    }
-
-    console.log(`🔗 Connecting API key for toolkit: ${toolkit}, user: ${session.user.id}, workspace: ${workspaceId}`)
+    console.log(`🔗 Connecting API key for toolkit: ${toolkit}, user: ${userId}, workspace: ${workspaceId}`)
 
     // Connect with API key using Composio MCP client
-    const mcpClient = getComposioMCPClient()
-    const connectionResult = await mcpClient.connectWithApiKey(session.user.id, toolkit, apiKey)
+    const client = new ComposioClient()
+    const connectionResult = await client.initiateApiKey(userId.toString(), toolkit, { api_key: apiKey })
 
-    if (connectionResult.success) {
+    if (connectionResult.connectionId) {
       console.log(`✅ API key connection successful for ${toolkit}: ${connectionResult.connectionId}`)
       
       // Update workspace_tools table with connection details
       await enableWorkspaceTool(
         workspaceId,
         toolkit,
-        parseInt(session.user.id),
+        userId,
         {
           connectionId: connectionResult.connectionId,
           connectionStatus: 'connected',
@@ -105,10 +81,10 @@ export async function POST(request: NextRequest) {
         message: `Successfully connected ${toolkit} with API key`
       })
     } else {
-      console.log(`❌ API key connection failed for ${toolkit}: ${connectionResult.error}`)
+      console.log(`❌ API key connection failed for ${toolkit}`)
       return NextResponse.json({
         success: false,
-        error: connectionResult.error || 'Failed to connect with API key'
+        error: 'Failed to connect with API key'
       }, { status: 400 })
     }
 

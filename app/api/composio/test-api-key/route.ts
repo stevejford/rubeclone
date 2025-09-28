@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { getAuthOptions } from '@/lib/auth'
-import { getComposioMCPClient } from '@/lib/composio-mcp'
+import { requireSession } from '@/lib/api/guards'
+import { ComposioClient } from '@/lib/composioClient'
 import { aiConfig } from '@/lib/env'
 
 /**
@@ -26,13 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user authentication
-    const session = await getServerSession(getAuthOptions())
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    await requireSession(request)
 
     // Parse and validate request body
     const body = await request.json()
@@ -55,9 +48,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`🧪 Testing API key for toolkit: ${toolkit}`)
 
-    // Test the API key using Composio MCP client
-    const mcpClient = getComposioMCPClient()
-    const testResult = await mcpClient.testApiKey(toolkit, apiKey)
+    // Test the API key using Composio unified client
+    const client = new ComposioClient()
+    const testResult = await client.testApiKey(toolkit, apiKey)
 
     if (testResult.success) {
       console.log(`✅ API key test successful for ${toolkit}`)
