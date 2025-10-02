@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   // TODO: Replace with real installed toolkits for the workspace
   const toolkits: string[] = []
 
-  const server = await buildServer({
+  await buildServer({
     userId: claims.sub,
     workspaceId: claims.ws,
     isPersonal: String(claims.ws).startsWith('user_'),

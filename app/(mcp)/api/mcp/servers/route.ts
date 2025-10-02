@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({})) as { workspaceId?: string | number; isPersonal?: boolean }
   const workspaceId = body.workspaceId
-  const isPersonal = !!body.isPersonal
   if (!workspaceId) {
     return new Response(JSON.stringify({ error: 'workspaceId required' }), { status: 400 })
   }

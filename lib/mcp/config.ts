@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { getEnv } from '@/lib/env'
 
 export const mcpFlags = () => {
