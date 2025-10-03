@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:clean": "rimraf .next && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -21,6 +22,7 @@
     "@auth/drizzle-adapter": "^1.10.0",
     "@composio/core": "^0.1.53",
     "@hookform/resolvers": "^3.3.4",
+    "@modelcontextprotocol/sdk": "^1.19.1",
     "@neondatabase/serverless": "^1.0.1",
     "@playwright/test": "^1.55.1",
     "@radix-ui/react-alert-dialog": "^1.0.5",
